@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <limits.h>
 
 int main() {
 	// single characters
@@ -30,12 +29,12 @@ int main() {
 	long long int l = 922337036854775807LL; // 8 bytes (-9 quintillion to + 9 quintillion) %lld
 	unsigned long long int m = 18446744073709551610ULL; // 8 bytes (0 to + 18 quintillion) %llu
 
-	printf("%lld\n", i);
-	printf("%d", sizeof(long double));
+	printf("%ud\n", i);
+	printf("%lu", sizeof(long double));
 	return 0;
 } 
 
 //		k
-//	  h   l
+//  h   l
 //		j
  
