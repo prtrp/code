@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Arch Linux) (preloaded format=pdflatex 2024.2.3)  3 FEB 2024 20:40
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Arch Linux) (preloaded format=pdflatex 2024.2.3)  5 FEB 2024 16:40
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -370,15 +370,15 @@ Underfull \hbox (badness 10000) in paragraph at lines 234--247
 
 [5] [6] (./The_c_programming.aux) ) 
 Here is how much of TeX's memory you used:
- 14341 strings out of 477985
- 288165 string characters out of 5840059
+ 14342 strings out of 477985
+ 288176 string characters out of 5840059
  1905388 words of memory out of 5000000
- 34304 multiletter control sequences out of 15000+600000
+ 34305 multiletter control sequences out of 15000+600000
  518126 words of font info for 52 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
  102i,8n,104p,426b,1386s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr12.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr17.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb></usr/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt9.pfb></usr/share/texmf-dist/fonts/type1/public/cm-super/sfrm1000.pfb>
-Output written on The_c_programming.pdf (6 pages, 145966 bytes).
+Output written on The_c_programming.pdf (6 pages, 149501 bytes).
 PDF statistics:
  82 PDF objects out of 1000 (max. 8388607)
  51 compressed objects within 1 object stream

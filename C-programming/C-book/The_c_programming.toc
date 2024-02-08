@@ -10,4 +10,6 @@
 \contentsline {subsection}{\numberline {2.4}Data Type in C}{4}{}%
 \contentsline {subsubsection}{\numberline {2.4.1}Primary data:}{5}{}%
 \contentsline {subsubsection}{\numberline {2.4.2}What happens if we take a value that is over the range?}{5}{}%
-\contentsline {section}{\numberline {3}}{6}{}%
+\contentsline {section}{\numberline {3}Operators}{6}{}%
+\contentsline {subsection}{\numberline {3.1}type of operands: }{6}{}%
+\contentsline {subsubsection}{\numberline {3.1.1}Unary}{6}{}%
