@@ -23,21 +23,17 @@ int main() {
         int h = seconds / 3600; 
         int m = (seconds % 3600) / 60;
         int s = seconds % 60;
-        
-        if (seconds == 300)
-            *pdr += 1;
             
         *fpr = (*ptr >= 300) ? 0 : 1;
 
         if((*pdr % 4) == 0)
           *lrpt = 1;
-
         else
           *lrpt = 0;
 
-     
-        mvprintw(0, 0, "%02d:%02d:%02d  -[%d] count \n\t  -[%d] ress\n\t  -[%d] long ress", h, m, s, *pdr, *fpr, *lrpt);
-        
+        mvprintw(0, 0, "%02d:%02d:%02d  -[%d] count \n\t  -[%d] ress\n"
+         "\t  -[%d] ress long\n\t", h, m, s, *pdr, *fpr, *lrpt); 
+
         refresh(); // Aggiorna lo schermo
 
         clock_t stop = clock() + CLOCKS_PER_SEC;
@@ -47,7 +43,11 @@ int main() {
         seconds--;
         
         if (seconds == 0)
+        {
           *ptr = 1800;
+          *pdr +=1;
+
+        }
     }
     
 
