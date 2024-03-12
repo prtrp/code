@@ -7,7 +7,7 @@ int main()
 {
   struct student
   {
-    int num;
+    int num; // --> this are structure members
     char name[60];
     float marks;
   }s1, s2; // --> we can also do this | you can initialize there too
@@ -29,6 +29,7 @@ int main()
   s3 = s; // it si true
   
   printf("%d\n", s.num); // name of istance + dot (member operator) + name of struct
+                         // the only way for initialize a istance of a struct
   
   s1.num = 3;
   strcpy(s1.name, "petru");
