@@ -138,6 +138,7 @@ void account (void) {
   fclose(fp);
 
   printf("\nAccount created successfully!\n");
+  login();
 }
 
 void login(void) {
@@ -147,6 +148,7 @@ void login(void) {
   char password[56];
 
   char ch;
+  int choice;
   int i;
 
   FILE *fp = NULL;
@@ -191,8 +193,26 @@ void login(void) {
   }
 
   if (!login_success) {
-    gotoxy(16, 32);
-    printf("===Invalid username or password===\n");
+    gotoxy(16, 28);
+    printf("===Invalid username or password===");
+    gotoxy(18, 35);
+    printf("1....TRY AGINE");
+    gotoxy(20, 35);
+    printf("2....CREATE ACCOUNT");
+    gotoxy(22, 35);
+    printf("3....EXIT");
+    gotoxy(24, 35); 
+    printf("ENTER....");
+    scanf("%d", &choice);
+    switch(choice) {
+      case 1:
+        login();
+        break;
+      case 2:
+        account();
+      case 3:
+        exit(0);
+    }
   }
 }
 
@@ -221,39 +241,34 @@ void showProfile(char* usrNam){
       printf("LASR NAME..%s\n\n\n", u1.lName);
 
       gotoxy(12, 20);
-      printf("birthday..", u1.date);
-      gotoxy(13, 20);
-      printf("month..", u1.month);
-      gotoxy(14, 20);
-      printf("year..", u1.year);
+      printf("birthday..%d-%d-%d\n", u1.date, u1.month, u1.year);
 
-      gotoxy(16, 20);
+      gotoxy(14, 20);
       printf("idCard..%s", u1.idCard);
-      gotoxy(17, 20);
+      gotoxy(15, 20);
       printf("Phon Number..%s", u1.phonNum);
-      gotoxy(18, 20);
+      gotoxy(16, 20);
       printf("address..%s", u1.address);
     }
   } 
   fclose(fp);
-  system("clear");
 
-  gotoxy(6, 0);
+  gotoxy(20, 20);
   printf(" HOME ");
 
-  gotoxy(7, 0);
+  gotoxy(21, 20);
   printf("******");
 
-  gotoxy(9, 0);
+  gotoxy(23, 20);
   printf(" 1....CHECK BALANCE");
 
-  gotoxy(11, 0);
+  gotoxy(25, 20);
   printf(" 2....TRANSFER MONEY");
 
-  gotoxy(13, 0);
+  gotoxy(27, 20);
   printf(" 3....LOG OUT\n\n");
 
-  gotoxy(15, 0);
+  gotoxy(29, 20);
   printf(" 4....EXIT\n\n");
 
   printf(" ENTER YOUR CHOICES..");
@@ -281,7 +296,7 @@ void logout(void) {
   fflush(stdout); // Assicurati che il messaggio venga stampato immediatamente
 
   for (int i = 0; i < 10; i++) {
-    usleep(50000); // Pausa di 500 millisecondi (0.5 secondi)
+    usleep(50000); // Pausa
     printf(".");
     fflush(stdout); // Assicurati che ogni punto venga stampato immediatamente
   }
