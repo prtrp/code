@@ -6,13 +6,15 @@
 
 void account(void);
 void login(void);
-void showProfile(char*);
+void accountFunctions(char*);
 void logout(void);
-void transferMoney();
-void checkBalance();
+void transferMoney(char*);
+void checkBalance(char*);
+void home(void);
+void showId(char *);
 
-void gotoxy (int x, int y) {
-  printf("\033[%d;%dH", x, y);
+void gotoxy (int y, int x) {
+  printf("\033[%d;%dH", y, x);
 }
 
 // it is the struct of username data
@@ -39,11 +41,16 @@ typedef struct {
 
 // main function
 int main() {
+  home();
+  return 0;
+}
+
+void home(void) {
   system("clear");
   int choice;
 
   gotoxy(5, 20);
-  printf("WELCOME TO BANK ACCOUNT SYSTEM\n\n");
+  printf("WELCOME TO BANK ACCOUNT SYSTEM");
 
   gotoxy(5, 18);
   printf("**********************************");
@@ -58,15 +65,14 @@ int main() {
   printf("2.... ALREADY A USER? SIGN IN");
 
   gotoxy(14, 20);
-  printf("3.... EXIT\n\n");
+  printf("3.... EXIT");
 
-  printf("\n\nENTER YOUR CHOICE.. ");
+  printf("ENTER YOUR CHOICE.. ");
   scanf("%d", &choice);
 
   switch (choice) {
     case 1:
       system("clear");
-      printf("\n\n PASSWORD 50 CHARACTERS MAX!!");
       account();
       break;
     case 2:
@@ -75,10 +81,9 @@ int main() {
     case 3:
       exit(1);
   }
-  return 0;
 }
 
-// create the account of users
+// create the account
 void account (void) {
   char ch;
   int i;
@@ -138,7 +143,7 @@ void account (void) {
   fclose(fp);
 
   printf("\nAccount created successfully!\n");
-  login();
+  home();
 }
 
 void login(void) {
@@ -186,7 +191,7 @@ void login(void) {
   int login_success = 0;  // Variabile per indicare se il login è riuscito
   while (fread(&u1, sizeof(u1), 1, fp)) {
     if (strcmp(username, u1.fName) == 0 && strcmp(password, u1.passWord) == 0) {
-      showProfile(username);
+      accountFunctions(username);
       login_success = 1;
       break;
     }
@@ -198,10 +203,8 @@ void login(void) {
     gotoxy(18, 35);
     printf("1....TRY AGINE");
     gotoxy(20, 35);
-    printf("2....CREATE ACCOUNT");
-    gotoxy(22, 35);
-    printf("3....EXIT");
-    gotoxy(24, 35); 
+    printf("2....RETRUN TO HOME");
+    gotoxy(22, 35); 
     printf("ENTER....");
     scanf("%d", &choice);
     switch(choice) {
@@ -209,68 +212,38 @@ void login(void) {
         login();
         break;
       case 2:
-        account();
-      case 3:
-        exit(0);
+        home();
     }
   }
 }
 
-void showProfile(char* usrNam){
+void accountFunctions(char* usrNam){
   system("clear");
 
-  int choice, i;
-  
-  FILE *fp = NULL;
-  fp = fopen("username.dat", "rb");
-  if(fp == NULL) {
-    printf("error in the pointer\n");
-    exit(1);
-  }
-  user u1;
-  
-  while(fread(&u1, sizeof(u1), 1, fp)) {
-    if(strcmp(usrNam, u1.fName) == 0) {
-      gotoxy(5, 20);
-      printf("==== YOUR ACCOUNT INFO ====");
-      gotoxy(7, 20);
-      printf("***************************");
-      gotoxy(9, 20);
-      printf("NAME..%s\n", u1.fName);
-      gotoxy(10, 20);
-      printf("LASR NAME..%s\n\n\n", u1.lName);
+  int choice;
 
-      gotoxy(12, 20);
-      printf("birthday..%d-%d-%d\n", u1.date, u1.month, u1.year);
-
-      gotoxy(14, 20);
-      printf("idCard..%s", u1.idCard);
-      gotoxy(15, 20);
-      printf("Phon Number..%s", u1.phonNum);
-      gotoxy(16, 20);
-      printf("address..%s", u1.address);
-    }
-  } 
-  fclose(fp);
-
-  gotoxy(20, 20);
+  gotoxy(5, 20);
   printf(" HOME ");
 
-  gotoxy(21, 20);
+  gotoxy(7, 20);
   printf("******");
 
-  gotoxy(23, 20);
+  gotoxy(9, 20);
   printf(" 1....CHECK BALANCE");
 
-  gotoxy(25, 20);
+  gotoxy(11, 20);
   printf(" 2....TRANSFER MONEY");
 
-  gotoxy(27, 20);
-  printf(" 3....LOG OUT\n\n");
+  gotoxy(13, 20);
+  printf(" 3....LOG OUT");
 
-  gotoxy(29, 20);
-  printf(" 4....EXIT\n\n");
+  gotoxy(15, 20);
+  printf(" 4....SHOW USER ID");
 
+  gotoxy(17, 20);
+  printf(" 5....EXIT");
+
+  gotoxy(19, 20);
   printf(" ENTER YOUR CHOICES..");
   scanf("%d", &choice);
   
@@ -283,12 +256,61 @@ void showProfile(char* usrNam){
       break;
     case 3:
       logout();
-      login();
+      home();
       break;
     case 4:
+      showId(usrNam);
+      break;
+    case 5:
       exit(0);
       break;
   }
+}
+
+void showId(char *usrNam) {
+  system("clear");
+  char ch;
+  FILE *fp = NULL;
+  fp = fopen("username.dat", "rb");
+  if(fp == NULL) {
+    printf("error in the pointer\n");
+    exit(1);
+  }
+  user u1;
+
+  while(fread(&u1, sizeof(u1), 1, fp)) {
+    if(strcmp(usrNam, u1.fName) == 0) {
+      gotoxy(5, 20);
+      printf("==== YOUR ACCOUNT INFO ====");
+      gotoxy(7, 20);
+      printf("***************************");
+      gotoxy(9, 20);
+      printf("NAME.........%s\n", u1.fName);
+      gotoxy(10, 20);
+      printf("LASR NAME....%s\n\n\n", u1.lName);
+
+      gotoxy(12, 20);
+      printf("birthday.....%d-%d-%d\n", u1.date, u1.month, u1.year);
+
+      gotoxy(14, 20);
+      printf("idCard.......%s", u1.idCard);
+      gotoxy(15, 20);
+      printf("Phon Number..%s", u1.phonNum);
+      gotoxy(16, 20);
+      printf("address......%s", u1.address);
+    }
+  } 
+  fclose(fp);
+
+  gotoxy(18, 20);
+  printf("INSERT ENTER FOR CONTINUE");
+  getchar();
+  while ((ch = getchar()) != EOF) {
+    if (ch == '\n') {
+      break;
+    }
+  }
+  accountFunctions(usrNam);
 }
 
 void logout(void) {
@@ -308,6 +330,7 @@ void transferMoney(char *usrNam) {
   system("clear");
   int foundFrom = 0, foundTo = 0;
   long posFrom = -1, posTo = -1;
+  char nobody[8] = "nobody";
   char ch;
   int i, j;
   user u1;
@@ -327,12 +350,16 @@ void transferMoney(char *usrNam) {
   gotoxy(5, 33);
   printf("========================");
 
-  gotoxy(13, 33);
-  printf(" TO (username of person)..");
+  gotoxy(13, 15);
+  printf(" TO (username of person, if you want to exit enter nobody)....");
   scanf("%s", &userTo);
- 
+
+  if(strcmp(userTo, nobody) == 0) {
+    accountFunctions(usrNam);
+  }
+
   gotoxy(16, 33);
-  printf("ENTER THE AMOUNT OF MOENY TO TRANSFER");
+  printf("ENTER THE AMOUNT OF MOENY TO TRANSFER....");
   scanf("%d", &tr1.amountMoney);
   getchar();
  
@@ -387,7 +414,7 @@ void transferMoney(char *usrNam) {
 
   fclose(fp);
   fclose(ftrack);
-  //--------------------------------------------->>
+
 
   gotoxy(20, 33);
   printf("AMOUNT SUCCESSFULLY TRANSFERRED....");
@@ -399,7 +426,7 @@ void transferMoney(char *usrNam) {
     }
   }
 
-  showProfile(usrNam);
+  accountFunctions(usrNam);
 }
 
 void checkBalance(char *usrNam) {
@@ -436,8 +463,7 @@ void checkBalance(char *usrNam) {
   }
   fclose(fp);
 
-  // Chiamata a showProfile solo se l'utente è stato trovato
   if (found) {
-    showProfile(usrNam);
+    accountFunctions(usrNam);
   }
 }

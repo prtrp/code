@@ -1,28 +1,8 @@
-  User  -michele
-  sent  -1000
-To user  -petru
-
-  User  -petru
-  sent  -1000
-To user  -michele
-
-  User  -spartaco
-  sent  -4000
-To user  -petru
-
-  User  -petru
-  sent  -4000
-To user  -michele
-
-  User  -iuliana
-  sent  -1000
-To user  -petru
-
-   User  -petru
-   sent  -663515656
-To user  -pdfd
-
-   User  -petru
+   User  -michele
    sent  -1000
+To user  -petru
+
+   User  -petru
+   sent  -2000
 To user  -michele
 
