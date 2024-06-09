@@ -14,7 +14,7 @@ int main() {
   char c;
 
   if(fptr == NULL) {
-    fptr = fopen(fName, "w+") {
+    fptr = fopen(fName, "w+"); 
     
     while((c = fgetc(stdin)) != EOF) {
       fputc(c, fptr);

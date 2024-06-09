@@ -32,7 +32,7 @@ typedef struct {
   char passWord[56];
 } user;
 
-// it is the struct for see the money
+  // it is the struct for see the money
 typedef struct {
   char userNameTo[24];
   char userNameFrom[24];
@@ -161,7 +161,7 @@ void login(void) {
   if(fp == NULL) {
     printf("Pointer null\n");
     exit(1);
-  }
+      }
   user u1;
 
   gotoxy(2, 34);
@@ -467,3 +467,4 @@ void checkBalance(char *usrNam) {
     accountFunctions(usrNam);
   }
 }
+
