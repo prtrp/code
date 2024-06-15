@@ -1,1 +1,1 @@
-It is my stdy code, here i try whai i learn
+It is my study code, here i try whai i learn
