@@ -1,1 +1,1 @@
-i like to program, it is my place where i put my code :] 
+It is my stdy code, here i try whai i learn
