@@ -1,15 +1,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+// create a structure
 typedef struct Node {
   int value;
   struct Node* next;
 } Node;
 
+// Function declaration
 void link_list1(void);
 void link_list2(void);
 void insert_end(Node**, int);
 
+// start to coding linked Lists
 int main(int argc, char *argv[]) {
   Node *root;
   root = NULL;
@@ -24,6 +27,28 @@ int main(int argc, char *argv[]) {
   printf("\n");
   return 0;
 
+}
+
+
+void insert_end(Node** root, int value) {
+  Node *new_node = malloc(sizeof(Node));
+  if(new_node == NULL) {
+    printf("new Node is null\n");
+    exit(1);
+  }
+  new_node -> next = NULL;
+  new_node -> value = value;
+
+  if(*root == NULL) {
+    *root = new_node;
+    return;
+  }
+
+  Node *curr = *root;
+  while(curr -> next != NULL) {
+    curr = curr -> next;
+  }
+  curr -> next = new_node;
 }
 
 void link_list1(void) {
@@ -73,24 +98,3 @@ void link_list2(void) {
   free(root.next);
 }
 
-void insert_end(Node** root, int value) {
-  Node *new_node = malloc(sizeof(Node));
-  if(new_node == NULL) {
-    printf("new Node is null\n");
-    exit(1);
-  }
-  new_node -> next = NULL;
-  new_node -> value = value;
-
-  if(*root == NULL) {
-    *root = new_node;
-    return;
-  }
-
-  Node *curr = *root;
-  while(curr -> next != NULL) {
-    curr = curr -> next;
-  }
-  curr -> next = new_node;
-
-}
