@@ -1,0 +1,26 @@
+su cosa di dobbiamo preparare:
+  1) aritmetica di base:
+    -insiemi numerici
+    -numeri primi
+    -proprieta delle potenze
+    -rapporti percentuali e proporzioni
+
+  2) algebra:
+    -polinomi
+    -eq. e diseq.
+    -modulo
+
+  3) funzioni:
+    -concetti di base
+    -esponenziali e log
+    -goniometria e trigonometria
+
+  4) geometria:
+    -piana
+    -solida
+    -analitica
+
+  5) statistica
+     probabilita
+     calcolo combinatorio
+     (fino al lancio dei dadi)
