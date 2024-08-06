@@ -1,0 +1,8 @@
+{
+  "textFontFamily": "JetBrainsMonoNL Nerd Font Mono",
+  "baseFontSize": 14,
+  "monospaceFontFamily": "JetBrainsMono Nerd Font Mono",
+  "enabledCssSnippets": [
+    "custom_math"
+  ]
+}
