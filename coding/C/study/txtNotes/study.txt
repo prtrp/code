@@ -1,0 +1,2 @@
+1. how heap work in C, how function are structured. :]
+2. waht is a stack and how works in c. :]
