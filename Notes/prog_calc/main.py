@@ -133,7 +133,7 @@ def maius_minusc():
   c = 'A'
   if c >= 'A' and c <= 'Z':
     delta = ord(c) - ord('A')
-    c_min = chr(ord('a') + delta) # la lettera minuscola
+      c_min = chr(ord('a') + delta) # la lettera minuscola
     print(c_min)
   
 
