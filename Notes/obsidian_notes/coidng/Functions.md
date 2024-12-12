@@ -50,3 +50,12 @@ for i in range(10, 0, -1): # se vuoi lo step devi per forza esplicitare lo start
 	print(i)
 ```
 questo significa che se `start` > `stop` allora dobbiamo fare come lo slicing e mettere un numero negativo, se no otterremmo una lista vuota o nulla.
+
+# join()
+è utilizzato per separare gli elementi nella stringa o lista di stringhe con un qualsiasi carattere.
+## sintassi:
+```python
+x = ["1", "2", "3"]
+print("x".join(x))
+# outpus is 1*2*3
+```
