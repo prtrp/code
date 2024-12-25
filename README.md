@@ -1,1 +1,1 @@
-It is my study code, here i try whai i learn
+It is my code of study in my CS degree on torvergata and personal projects
