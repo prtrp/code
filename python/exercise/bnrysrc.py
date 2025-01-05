@@ -53,35 +53,40 @@ def bnrysrc2d(arr2d, value):
   # search in quel array, così che impiega tempo logaritmico per gi array esterni
   # e tempo logaritmico per gli elementi interni.
   
-  lx_1d = 0
-  rx_1d = len(arr2d)-1
-  direction = 0
-  while lx_1d <= rx_1d:
-    mid_1d = (lx_1d + rx_1d)//2
+  lx_2d = 0
+  rx_2d = len(arr2d)-1
+  
+  while lx_2d <= rx_2d:
+    cx_2d = (lx_2d + rx_2d)//2
+    
+    if arr2d[cx_2d][0]<= value <= arr2d[cx_2d][-1]:
 
-    lx_2d = 0
-    rx_2d = len(arr2d[mid_1d])-1
+      lx_1d = 0
+      rx_1d = len(arr2d[cx_2d])-1
 
-    while lx_2d <= rx_2d:
-      mid_2d = (lx_2d + rx_2d)//2
-      
-      if arr2d[mid_2d][mid_1d] == value:
-        return f"[{mid_1d}][{mid_2d}], val: {value}"
+      while lx_1d <= rx_1d:
+        cx_1d = (lx_1d + rx_1d)//2
 
-      elif arr2d[mid_1d][mid_2d] > value:
-        rx_2d = mid_2d-1
-        direction = 0
+        if value == arr2d[cx_2d][cx_1d]:
+          return (cx_2d, cx_1d)
 
-      else:
-        lx_2d = mid_2d+1
-        direction = 1
+        elif arr2d[cx_2d][cx_1d] < value:
+          lx_1d = cx_1d +1
 
-    if direction == 0:
-      rx_1d = mid_1d-1
+        else:
+          rx_1d = cx_1d -1
+
+      return None
+
+    elif arr2d[cx_2d][0] > value:
+      rx_2d = cx_2d -1
     else:
-      lx_1d = mid_1d+1
-
-  return -1
+      lx_2d = cx_2d +1
+     
+  return None
 
 arr_2d = [[1, 3, 5], [7, 9, 11], [13, 15, 17]]
-print(bnrysrc2d(arr_2d, 7))
+
+for i in arr_2d:
+  for j in i:
+    print("result is: ", bnrysrc2d(arr_2d, j), j)
