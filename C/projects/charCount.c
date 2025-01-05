@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// struct for the data inside the array
+//  struct for the data inside the array
 // with the letter and his count
 typedef struct data {
     char letter;
@@ -27,7 +27,7 @@ int main() {
     char c;
 
     int i = 0;
-    while((c = getchar()) != EOF) {
+    while((c = getchar()) != '\n') {
         s[i] = c;
         i++;
     }
@@ -40,7 +40,6 @@ int main() {
 }
 
 void printlst(list* lst) {
-    printf("\n");
     for(int i = 0; i < lst->size; i++ ) {
         printf("%c: ", lst->dtarr[i].letter);
         for(int j = 0; j < lst->dtarr[i].count; j++) {
@@ -67,7 +66,7 @@ void countChr (list* lst, char val) {
 }
 
 // create the root of the list
-list* init(){
+list* init() {
     list *root = malloc(sizeof(list));
     (*root) = (list){NULL, 0};
     return root;
