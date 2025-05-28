@@ -1,9 +1,0 @@
-hello from vim, naw i want to see if it copy my file or not, so 
-lets try    to se ~~~\\\///
-
-aljs;dkfj;a;lsfk            if (temp == NULL) {
-
-                free(buffer);
-                fclose(file);
-                return NULL;
-            }

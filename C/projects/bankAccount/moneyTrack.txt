@@ -1,8 +1,0 @@
-   User  -michele
-   sent  -1000
-To user  -petru
-
-   User  -petru
-   sent  -2000
-To user  -michele
-

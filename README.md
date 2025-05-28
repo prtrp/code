@@ -1,1 +1,1 @@
-It is my code of study in my CS degree on torvergata and personal projects
+here i want to create my own project and let other take inspiration by what i am doing. 
