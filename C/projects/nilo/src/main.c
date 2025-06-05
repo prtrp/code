@@ -13,6 +13,7 @@
 
 //------data declaration---------
 struct editorConfig {
+	int cx, cy;
 	int screenrows;
 	int screencols;
 	struct termios orig_termios;
@@ -26,38 +27,18 @@ struct abuf {
 };
 #define ABUF_INIT {NULL, 0}
 
-//------function declaration-----
-void die(const char *s);
-void enableRowMode();
-void disableRowMode();
-char editorReadKey();
-void editorProcessKeypress();
-void editorRefreshScreen();
-void editorDrawRows(struct abuf *ab);
-int getWindowSize(int *rows, int *cols);
-void initEditor();
-int getCursorPosition(int *rows, int *cols);
-void abAppend(struct abuf *ab, const char *s, int len);
-void abFree(struct abuf *ab);
-
-//-----------main----------------
-int main() {
-    enableRowMode();
-	initEditor();
-
-    while(1) {
-		editorRefreshScreen();
-		editorProcessKeypress();
-	}
-    return 0;
-}
-
-void initEditor() {
-	if (getWindowSize(&E.screenrows, &E.screencols) == -1)
-		die("getWindows");
-}
-//-------function definition-----
-
+// enum
+enum editorKey {
+	ARROW_LEFT = 1000,
+	ARROW_RIGHT,
+	ARROW_UP,
+	ARROW_DOWN,
+	DEL_KEY,
+	HOME_KEY,
+	END_KEY,
+	PAGE_UP,
+	PAGE_DOWN
+};
 
 //---------Terminal--------------
 void die(const char *s) {
@@ -90,27 +71,52 @@ void enableRowMode() {
 		die("tcsetattr");
 }
 
-char editorReadKey() {
+int editorReadKey() {
 	int nread;
 	char c;
 	while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
 		if (nread == -1 && errno != EAGAIN) die("read");
 	}
-	return c;
-}
 
-int getWindowSize(int *rows, int *cols) {
-	struct winsize ws;
+	if (c == '\x1b') {
+		char seq[3];
 
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
-			return -1;
+		if (read(STDIN_FILENO, &seq[0], 1) != 1) return '\x1b';
+		if (read(STDIN_FILENO, &seq[1], 1) != 1) return '\x1b';
+
+		if (seq[0] == '[') {
+			if (seq[1] > '0' && seq[1] <= '9') {
+				if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
+				if (seq[2] == '~') {
+					switch (seq[1]) {
+						case '1': return HOME_KEY;
+						case '3': return DEL_KEY;
+						case '4': return END_KEY;
+						case '5': return PAGE_UP;
+						case '6': return PAGE_DOWN;
+						case '7': return HOME_KEY;
+						case '8': return END_KEY;
+					}
+				}
+			} else {
+				switch (seq[1]) {
+					case 'A': return ARROW_UP;
+					case 'B': return ARROW_DOWN;
+					case 'C': return ARROW_RIGHT;
+					case 'D': return ARROW_LEFT;
+					case 'H': return HOME_KEY;
+					case 'F': return END_KEY;
+				}
+			}
+		} else if (seq[0] == 'O') {
+			switch (seq[1]) {
+				case 'H': return HOME_KEY;
+				case 'F': return END_KEY;
+			}
 		}
-		return getCursorPosition(rows, cols);
+		return '\x1b';
 	} else {
-		*cols = ws.ws_col;
-		*rows = ws.ws_row;
-		return 0;
+		return c;
 	}
 }
 
@@ -137,10 +143,26 @@ int getCursorPosition(int *rows, int *cols) {
 
 	return 0;
 }
+
+int getWindowSize(int *rows, int *cols) {
+	struct winsize ws;
+
+	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
+			return -1;
+		}
+		return getCursorPosition(rows, cols);
+	} else {
+		*cols = ws.ws_col;
+		*rows = ws.ws_row;
+		return 0;
+	}
+}
+
 //----------Append Buffer--------
 
 void abAppend(struct abuf *ab, const char *s, int len) {
-	char *new = realloc(ab->b, ab-> len + len);
+	char *new = realloc(ab->b, sizeof(char)*(ab-> len + len));
 
 	if (new == NULL) {
 		return;
@@ -183,21 +205,54 @@ void editorDrawRows(struct abuf *ab) {
 void editorRefreshScreen() {
 	struct abuf ab = ABUF_INIT;
 
-	abAppend(&ab, "\x1b[?25l", 4);
+	abAppend(&ab, "\x1b[?25l", 4); // serve per nascondere il cursore
 	abAppend(&ab, "\x1b[H", 3);
 
 	editorDrawRows(&ab);
 
-	abAppend(&ab, "\x1b[H", 3);
-	abAppend(&ab, "\x1b[?25h", 4);
+	char buf[32];
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy, E.cx);
+	abAppend(&ab, buf, strlen(buf));
+
+	abAppend(&ab, "\x1b[?25h", 4); // serve per mostrare il cursore
 
 	write(STDOUT_FILENO, ab.b, ab.len);
 	abFree(&ab);
 }
 
 //-----------input---------------
+
+// fa parte di editorProcessKeypress
+void editorMoveCursor(int key) {
+	switch(key) {
+		case ARROW_LEFT:
+			if (E.cx != 1) {
+				E.cx--;
+			}
+			break;
+
+		case ARROW_RIGHT:
+			if (E.cx != E.screencols) {
+				E.cx++;
+			}
+			break;
+
+		case ARROW_UP:
+			if (E.cy != 1) {
+				E.cy--;
+			}
+			break;
+
+		case ARROW_DOWN:
+			if (E.cy != E.screenrows) {
+				E.cy++;
+			}
+			break;
+	}
+}
+
 void editorProcessKeypress() {
-	char c = editorReadKey();
+	int c = editorReadKey();
 
 	switch (c) {
 		case CTRL_KEY('q'):
@@ -205,5 +260,53 @@ void editorProcessKeypress() {
 			write(STDOUT_FILENO, "\x1b[H", 3);
 			exit(0);
 			break;
+
+		case HOME_KEY:
+			E.cx = 0;
+			break;
+
+		case END_KEY:
+			E.cx = E.screencols;
+			break;
+
+		case PAGE_UP:
+		case PAGE_DOWN:
+			{
+				int tiems = E.screenrows;
+				while(tiems--) {
+					editorMoveCursor(c == PAGE_UP ? ARROW_UP : ARROW_DOWN);
+				}
+			}
+			break;
+
+		case ARROW_LEFT:
+		case ARROW_RIGHT:
+		case ARROW_UP:
+		case ARROW_DOWN:
+			editorMoveCursor(c);
+			break;
 	}
 }
+
+//-----------main----------------
+
+void initEditor() {
+	E.cx = 1;
+	E.cy = 1;
+
+	if (getWindowSize(&E.screenrows, &E.screencols) == -1)
+		die("getWindows");
+}
+
+int main() {
+    enableRowMode();
+	initEditor();
+
+    while(1) {
+		editorRefreshScreen();
+		editorProcessKeypress();
+	}
+    return 0;
+}
+
+
