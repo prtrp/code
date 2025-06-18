@@ -5,4 +5,4 @@ Projects that is want to implement:
 - make my Bank project LAN-working by adding networking
 - do pask (Personal Task Manager)
 - do an interpreter
-- make my terminal (maybe slike suckless st)
+- make my terminal (maybe like suckless st)
