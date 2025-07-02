@@ -1,1 +1,8 @@
-here i want to create my own project and let other take inspiration by what i am doing. 
+Projects that is want to implement:
+- Text Editor
+- snake game
+- upgrade Bank project
+- make my Bank project LAN-working by adding networking
+- do pask (Personal Task Manager)
+- do an interpreter
+- make my terminal (maybe like suckless st)
