@@ -1,5 +1,4 @@
 //--- includes
-
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
