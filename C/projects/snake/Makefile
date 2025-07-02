@@ -1,6 +1,6 @@
 CC = gcc
-FLAGS = -Wall -Wextra -pedantic -std=c99
-SRC = src/main.c
+FLAGS = -Wall -Wextra -pedantic -g
+SRC = src/snake.c
 OUT = bin/sanke
 
 all:
