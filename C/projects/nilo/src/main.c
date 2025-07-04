@@ -1,4 +1,8 @@
 //--- includes
+#define _DEFAULT_SOURCE
+#define _BSD_SOURCE
+#define _GNU_SOURCE
+
 #include <ctype.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
@@ -7,6 +11,7 @@
 #include <errno.h> 
 #include <termios.h>
 #include <unistd.h>
+#include <sys/types.h>
 
 // --- defines
 
@@ -15,21 +20,38 @@
 
 enum editorKey {
 	ARROW_LEFT = 1000, 
-	ARROW_RIGHT, 
+	ARROW_RIGHT,
 	ARROW_UP,
+	DEL_KEY,
 	ARROW_DOWN,
+	HOME_KEY,
+	END_KEY,
 	PAGE_UP,
 	PAGE_DOWN
 };
 
 //--- data
 
+// datatype for store a row, erow = editor row, stores a line of text as a pointer 
+typedef struct erow {
+	int size; // size of a row
+	char *chars; // chars inside the line
+} erow;
+
 // creat our original status of terminal
 struct editorConfig {
 	// position of cursor (x; y)
 	int cx, cy;
+
+	// track which row user is scrolled to 
+	// the firt line that appair
+	int rowoff;
 	int screenrows;
 	int screencols;
+	int numrows; 
+
+	// array that contains all rows
+	erow *row;
 	struct termios orig_termios;
 };
 struct editorConfig E;
@@ -65,7 +87,7 @@ void enableRawMode() {
 	raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
 
 	// convert \r to \n | diable ctrl-s and ctrl-q | disable ctrl-c 
-	// remove eight byte | check di parità
+	// remove eighth byte | check di parità
 	raw.c_iflag &= ~(ICRNL | IXON | BRKINT | ISTRIP | INPCK);
 
 	// convert each \n into \r\n
@@ -106,8 +128,13 @@ int editorReadKey() {
 				if (read(STDIN_FILENO, &seq[2], 1) != 1) return '\x1b';
 				if (seq[2] == '~') {
 					switch (seq[1]) {
+						case '1': return HOME_KEY;
+						case '3': return DEL_KEY;
+						case '4': return END_KEY;
 						case '5': return PAGE_UP;
 						case '6': return PAGE_DOWN;
+						case '7': return HOME_KEY;
+						case '8': return END_KEY;
 					}
 				}
 			}
@@ -117,8 +144,15 @@ int editorReadKey() {
 					case 'B': return ARROW_DOWN;
 					case 'C': return ARROW_RIGHT;
 					case 'D': return ARROW_LEFT;
+					case 'H': return HOME_KEY;
+					case 'F': return END_KEY;
 
 				}
+			}
+		} else if (seq[0] == 'O') {
+			switch (seq[1]) {
+				case 'H': return HOME_KEY;
+				case 'F': return END_KEY;
 			}
 		}
 
@@ -175,6 +209,64 @@ int getWindowSize(int *rows, int *cols) {
 	}
 }
 
+//-- row operations
+void editorAppendRow(char *s, size_t len) {
+
+	// adding erow datatype for each row encountered, +1 for 0 index
+	E.row = realloc(E.row, sizeof(erow) * (E.numrows + 1));
+
+	// at means where we are inside the array of struct erow 
+	int at = E.numrows;
+
+	// inside the specific location inside array
+	// .size is equal to the len
+	E.row[at].size = len;
+
+	// inside the specific location inside array 
+	// create enough space for contain the string an '\0'
+	E.row[at].chars = malloc(sizeof(char)*(len+1));
+
+	// copy the chars from the string to the chars location
+	memcpy(E.row[at].chars, s, len);
+
+	// add the null terminator
+	E.row[at].chars[len] = '\0';
+
+	// increment the numbers of rows
+	E.numrows++;
+}
+
+//--- file i/o
+
+void editorOpen(char *filename) {
+	FILE *fp = fopen(filename, "r");
+	if (!fp) die("fopen");
+
+	// is the buffer that rappresent the single line
+	char *line = NULL; 
+
+	// line cpapcity tiene traccia della capacita 
+	// corrente del buffer allocato
+	size_t linecap = 0;
+
+	// take the size of each line one at the time
+	ssize_t linelen;
+
+	// read only one row at time, each call overwrite line with another row
+	while ((linelen = getline(&line, &linecap, fp)) != -1) {
+		
+		// used for remove \n and \r at the end of the file and decrement the len
+		while (linelen > 0 && (line[linelen -1] == '\n' || line[linelen -1] == '\r')) linelen --;
+		editorAppendRow(line, linelen);
+	}
+
+	free(line);
+	fclose(fp);
+
+}
+
+//--- buffer append
+
 struct abuf {
 	char *b;
 	int len;
@@ -202,33 +294,60 @@ void abFree(struct abuf *ab) {
 	free(ab -> b);
 }
 
-// -- output
+// --- output
+
+void editorScroll() {
+	if (E.cy < E.rowoff) {
+		E.rowoff = E.cy;
+	}
+
+	if (E.cy >= E.rowoff + E.screenrows) {
+		E.rowoff = E.cy - E.screenrows + 1;
+	}
+}
 
 void editorDrawRows(struct abuf *ab) {
 	int y;
 	for (y = 0; y < E.screenrows; y++) {
 
-		// if we are at 1/3 of rows
-		if (y == E.screenrows / 3) {
-			char welcome[128];
+		int filerow = y + E.rowoff;
 
-			// return the len of what we print inside the welcome message
-			int welcomelen = snprintf(welcome, sizeof(welcome),
-							 "nilo editor -- version %s", KILO_VERSION);
+		// if our current line is bigger than our rows to print
+		if (filerow >= E.numrows) {
 
-			if (welcomelen > E.screencols) welcomelen = E.screencols;
-			int padding = (E.screencols - welcomelen) /2 ;
-			if (padding) {
-				abAppend(ab, "~", 1);
-				padding--;
+			// if we are at 1/3 of rows and if the file is empty
+			if (E.numrows == 0 && y == E.screenrows / 3) {
+				char welcome[128];
+
+				// return the len of what we print inside the welcome message
+				int welcomelen = snprintf(welcome, sizeof(welcome),
+							  "nilo editor -- version %s", KILO_VERSION);
+
+				if (welcomelen > E.screencols) welcomelen = E.screencols;
+				int padding = (E.screencols - welcomelen) /2 ;
+				if (padding) {
+					abAppend(ab, "~", 1);
+					padding--;
+				}
+				while (padding--) abAppend(ab, " ", 1);
+				abAppend(ab, welcome, welcomelen);
 			}
-			while (padding--) abAppend(ab, " ", 1);
-			abAppend(ab, welcome, welcomelen);
-		}
-		else {
-			abAppend(ab, "~", 1); 
+			else {
+				abAppend(ab, "~", 1); 
+			}
 		}
 
+		// else print our rows form E.row.chars
+		else {
+			int len = E.row[filerow].size;
+
+			// if the len of the line is bigger than the line
+			if (len > E.screencols) len = E.screencols;
+			abAppend(ab, E.row[filerow].chars, len);
+		}
+
+		// eraise right part in line from the cursor
+		// usefull for update the terminal
 		abAppend(ab, "\x1b[K", 3);
 		if (y < E.screenrows -1) {
 			abAppend(ab, "\r\n", 2);
@@ -237,6 +356,8 @@ void editorDrawRows(struct abuf *ab) {
 }
 
 void editorRefreshScreen() {
+	editorScroll();
+
 	struct abuf ab = ABUF_INIT;
 
 	// ?25 means control cursor, l means hide
@@ -253,7 +374,7 @@ void editorRefreshScreen() {
 	
 	// are putting inside buf the esc key for point to the position plus 1
 	// because terminal uses the 1-index position
-	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", E.cy + 1, E.cx + 1);
+	snprintf(buf, sizeof(buf), "\x1b[%d;%dH", (E.cy - E.rowoff) + 1, E.cx + 1);
 	abAppend(&ab, buf, strlen(buf));
 
 	// ?25 means control cursor, h means show
@@ -270,11 +391,11 @@ void editorMoveCursor(int key) {
 		case ARROW_LEFT:  if (E.cx > 0) E.cx--; break;
 		case ARROW_RIGHT: if (E.cx < E.screencols -1) E.cx++; break;
 		case ARROW_UP:    if (E.cy >= 1) E.cy--; break;
-		case ARROW_DOWN:  if (E.cy < E.screenrows -1) E.cy++; break;
+		case ARROW_DOWN:  if (E.cy < E.numrows) E.cy++; break;
 	}
 }
 
-void editorProcessKey() {
+void editorProcessKeypress() {
 	int c = editorReadKey();
 
 	switch (c) {
@@ -284,6 +405,9 @@ void editorProcessKey() {
 
 			exit(0); 
 			break;
+
+		case HOME_KEY: E.cx = 0; break;
+		case END_KEY: E.cx = E.screencols -1; break;
 
 		case PAGE_UP:
 		case PAGE_DOWN:
@@ -305,17 +429,24 @@ void editorProcessKey() {
 void initEditor() {
 	E.cx = 0;
 	E.cy = 0;
+	E.rowoff = 0;
+	E.numrows = 0;
+	E.row = NULL;
 
 	if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
 }
 
-int main() {
+int main(int argc, char *argv[]) {
 	enableRawMode();
 	initEditor();
 
+	// argv[0] is the name of program itself
+	// argv[1] is the first argument
+	if (argc >= 2) editorOpen(argv[1]);
+
 	while(1) {
 		editorRefreshScreen();
-		editorProcessKey();
+		editorProcessKeypress();
 	}
 	return 0;
 }
