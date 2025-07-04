@@ -1,10 +1,10 @@
-CC = gcc
-FLAGS = -Wall -Wextra -pedantic -g
 SRC = src/snake.c
-OUT = bin/sanke
+OUT = bin/snake
+CC = gcc
+FLAGS = -Wall -Wextra -pedantic -std=c99
 
 all:
 	@$(CC) $(FLAGS) $(SRC) -o $(OUT)
 
 exec:
-	@./$(OUT)
+	@./bin/snake

@@ -1,204 +1,204 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <unistd.h>
-#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include <termios.h>
 #include <errno.h>
 #include <sys/ioctl.h>
+#include <string.h>
+
+#define HEIGHT 30;
+#define WIDTH 40;
+
+//----------------------------------------------------//
+//##################### data type ####################//
+//----------------------------------------------------//
+
+// game settings
+struct game {
+    bool gameOver;
+    unsigned int xHead, yHead;
+    unsigned int cols, rows;
+    unsigned int xfruit, yfruit;
+    unsigned int score;
+};
+struct game G;
+
+// termianl settings
+struct termianl {
+    unsigned rows, cols;
+    struct termios orig_term;
+};
+struct termianl T;
 
 typedef struct dnarr {
-	size_t dlen;
-	size_t dindx;
-	char *darr;
-} dnarr;
+    int capacity;
+    int indx;
+    char *str;
+}dnarr;
+dnarr gamearr = {0, 0, NULL};
 
-struct gameConfig {
-	int sx, sy;
-	int screenrows;
-	int screencols;
-	struct termios orig_termios;
-};
-
-struct gameConfig gc;
-
-dnarr buffGame = {0, 0, NULL};
-
-//------------- game setup
-void disableGameMod(void) {
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &gc.orig_termios) == -1) {
-		perror("ERROR WITH tcsetattr");
-		exit(1);
-	}
+// --- die function
+void die (const char *s) {
+    perror(s);
+    write(STDIN_FILENO, "\x1b[2J\x1b[H", 7);
+    exit(1);
 }
 
-void enableGameMod(void) {
-	if (tcgetattr(STDIN_FILENO, &gc.orig_termios) == -1) {
-		perror("Error with tcgetattr");
-		exit(1);
-	}
-	atexit(disableGameMod);
+//----------------------------------------------------//
+//#################### DYNAMIC ARRAY #################//
+//----------------------------------------------------//
 
-	struct termios raw = gc.orig_termios;
-	raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
-	raw.c_iflag &= ~(IXON | ICRNL | BRKINT | INPCK | IXON | ISTRIP);
-	raw.c_oflag &= ~(OPOST);
-	raw.c_cflag &= ~(CS8);
+void apndArr(char *str, int len) {
+    while ((gamearr.capacity - gamearr.indx)<= len+1) 
+        gamearr.capacity = gamearr.capacity == 0 ? 2 : gamearr.capacity*2;
 
-	if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) {
-		perror("ERROR WITH tcsetattr");
-		exit(1);
-	}
+    char *new = NULL;
+    new = realloc(gamearr.str, sizeof(char)*gamearr.capacity);
+    if (new == NULL) die ("realloc"); 
+    gamearr.str = new;
+
+    memcpy(&gamearr.str[gamearr.indx], str, len);
+    gamearr.indx += len;
 }
 
-//------------- dynamic array
-void apDnarr(dnarr *arr, const char* inStr, size_t szArr) {
-	if(arr->dlen <= 0) {
-		arr->dlen = 2;
-		arr->darr = malloc(sizeof(char)*(arr->dlen));
-	}
+//----------------------------------------------------//
+//##################### TERMINAL MOD #################//
+//----------------------------------------------------//
 
-	if(arr->darr == NULL) {
-		fprintf(stderr, "Memory allocation error\n");
-		exit(1);
-	}
 
-	while((arr->dlen - arr->dindx) < szArr) {
-		arr->dlen *= 2;
-		char *tmp = NULL;
-		tmp = realloc(arr->darr, sizeof(char)*(arr->dlen));
-
-		if(tmp == NULL) {
-			fprintf(stderr, "Memory reallocation error\n");
-			free(arr->darr);
-			exit(1);
-		}
-		arr->darr = tmp;
-	}
-	memcpy(&arr->darr[arr->dindx], inStr, szArr);
-	arr->dindx += szArr;
+void disableRowMode(void) {
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &T.orig_term) == -1) die("tcsetattr");
+    if (write(STDIN_FILENO, "\x1b[2J\x1b[H", 7) != 7) die("write");
 }
 
-void dnFree(dnarr *strcArr) {
-	free(strcArr->darr);
-	strcArr->dindx = 0;
-	strcArr->dlen = 0;
+void enableRowMode(void) {
+
+    struct termios raw;
+
+    // setting terminal os original
+    if (tcgetattr(STDIN_FILENO, &T.orig_term) == -1) die("tcgetattr");
+
+    atexit(disableRowMode);
+
+    raw = T.orig_term;
+
+    raw.c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw.c_iflag &= ~(ISTRIP | ICRNL| IXON | BRKINT | INPCK);
+    raw.c_oflag &= ~(OPOST);
+    raw.c_cflag |= (CS8);
+
+    raw.c_cc[VTIME] = 1;
+    raw.c_cc[VMIN] = 0;   
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
-//------------- work with cursor
-int getCursorPosition(int *rows, int *cols) {
-	char buff[32];
-	unsigned int i = 0;
-	if((write(STDOUT_FILENO, "\x1b[6n", 4)) != 4) {
-		return -1;
-	}
-	while (i < sizeof(buff)-1) {
-		if (read(STDIN_FILENO, &buff[i], 1) != 1) break;
-		if (buff[i] == 'R') break;
-		i++;
-	}
-	buff[i] = '\n';
+//----------------------------------------------------//
+//##################### KEY INPUT ####################//
+//----------------------------------------------------//
 
-	if(buff[0] != '\x1b' || buff[1] != '[') {
-		return -1;
-	}
+void keyRead() {
+    int nread;
+    char c;
 
-	if(sscanf(&buff[2], "%d;%d", rows, cols) != 2) {
-		return -1;
-	}
+    while ((nread = read(STDIN_FILENO, &c, 1) != 1)) 
+        if (nread == -1 && errno != EAGAIN) die("read");
 
-	return 0;
+    switch (c) {
+        case 'q': exit(0);
+    }
+    
 }
 
-int getWindowSize(int *rows, int *cols) {
-	struct winsize ws;
+//----------------------------------------------------//
+//##################### DRAW PART ####################//
+//----------------------------------------------------//
 
-	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-		if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) {
-			return -1;
-		}
-		return getCursorPosition(rows, cols);
-	} else {
-		*cols = ws.ws_col;
-		*rows = ws.ws_row;
-		return 0;
-	}
+void getTermianlSize() {
+    struct winsize ws;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) die("ioctl");
+
+    T.cols = ws.ws_col;
+    T.rows = ws.ws_row;
 }
 
-//------------- print the corner of game
-void fullRec(size_t base, size_t hight) {
-	for(size_t rows = 0; rows < hight; rows++) {
-		for(size_t cols = 0; cols < base; cols++) {
-			if ((rows != 0 && rows != hight-1) && (cols != 0 && cols != base-1)) {
-				apDnarr(&buffGame, " ", 1);
-			} else {
-				if ((cols == 0 && rows == 0) || (cols == base-1 && rows == hight-1) ||
-					(cols == 0 && rows == hight-1) || (cols == base-1 && rows == 0)) {
-					apDnarr(&buffGame, "+", 1);
+void prtRec(int width, int height) {
+    char buff[32];
+    for (int i = 0; i < height; i++) {
+        snprintf(buff, sizeof(buff), 
+                 "\x1b[%d:%dH", ((T.rows - G.rows)/2) +i, (T.cols - G.cols)/2);
+        apndArr(buff, strlen(buff));
+        //for(unsigned int k = 0; k < (T.rows - G.rows); k++) printf(" ");
 
-				}else if (rows == 0 || rows == hight-1) {
-					apDnarr(&buffGame, "-", 1);
-					
-				}else {
-					apDnarr(&buffGame, "|", 1);
-				}
-			}
-		}
-		apDnarr(&buffGame, "\n\r", 2);
-	}
+        for(int j = 0; j < width; j++) {
+
+            // top and down border and upper corner
+            if ((i == 0 || i == height-1) && (j != 0 && j < width-1)) 
+                apndArr("\u2550", 3);
+            
+            else if (j == 0 && i == 0) 
+                apndArr("\u2554", 3);
+
+            else if (j == width-1 && i == 0) 
+                apndArr("\u2557", 3);
+
+
+            // left and write borders and lower corner
+            else if ((j == 0 && i < height-1)|| (j == width-1 && i < height-1)) 
+                apndArr("\u2551", 3); 
+
+            else if (j == 0 && i == height-1) {
+                apndArr("\u255A", 3);
+            }
+
+            else if (j == width-1 && i == height-1) {
+                apndArr("\u255D", 3);
+            }
+
+            else apndArr(" ", 1);
+        }
+    }
+    apndArr("\r\n", 2);
 }
 
-void readKey() {
-	int retRead;
-	char ch;
-	if((retRead = read(STDIN_FILENO, &ch, 1)) != 1) {
-		if(retRead == -1 && errno != EAGAIN) {
-			perror("error with read");
-			exit(1);
-		}
-	}
+void draw(void) {
+    write(STDOUT_FILENO, "\x1b[2J\x1b[H", 7);
 
-	if(ch == 'q') {
-		exit(0);
-	}
+    getTermianlSize();
+    if (G.cols > T.cols) G.cols = T.cols;
 
+    if (G.rows > T.rows) G.rows = T.rows-2;
+
+    prtRec(G.cols, G.rows);
+    write(STDOUT_FILENO, gamearr.str, gamearr.indx);
+    printf("Tcosl = %d, Trows = %d Gcols = %d Grows = %d\r\n", T.cols, T.rows, G.cols, G.rows);
 }
 
-void refreshScreen(void) {
-	// clean screen and go in first position
-	apDnarr(&buffGame, "\x1b[2J\x1b[H", 7);
+//----------------------------------------------------//
+//##################### MAIN #########################//
+//----------------------------------------------------//
 
-	fullRec(30, 20);
-	// put the cursor in the starting position
-	char buff[32];
-	snprintf(buff, sizeof(buff), "\x1b[%d;%dH", gc.sx, gc.sy);
-	apDnarr(&buffGame, buff, strlen(buff));
+void setup() {
+    enableRowMode();
 
-	// try center a line
-	write(STDOUT_FILENO, buffGame.darr, buffGame.dindx);
+    G.gameOver = false;
+    G.cols = WIDTH;
+    G.rows = HEIGHT;
 
-	dnFree(&buffGame);
+    G.score = 0;
+    G.xfruit = 0;
+    G.yfruit = 0;
+    G.xHead = 0;
+    G.yHead = 0;
+
 }
-
-void init(void) {
-
-	if(getWindowSize(&gc.screenrows, &gc.screencols) == -1) {
-		perror("error with getWindows");
-		exit(1);
-	}
-
-	// initiailze the position of snake
-	gc.sx = (gc.screenrows / 2);
-	gc.sy = (gc.screencols / 2);
-}
-
 
 int main() {
-	init();
-	enableGameMod();
-	while(1) {
-		refreshScreen();
-		readKey();
-	}
+    setup();
 
-	return 0;
+    while(!G.gameOver) {
+        draw();
+        keyRead();
+    }
 }
