@@ -1,58 +1,41 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <errno.h>
 
-//----define
-#define INIT_DARR {NULL, 0}
+typedef struct dnarr {
+    int capacity;
+    int indx;
+    char *str;
+}dnarr;
 
-//-----data
-typedef struct darr {
-	char *dastr;
-	int dalen;
-} darr;
+dnarr gamearr = {0, 0, NULL};
 
 
-//----fn declaration
-void apDarr(darr *darr, const char *apstr, int aplen);
-void die(const char *dstr);
+void apndArr(char *str, int len) {
+    while ((gamearr.capacity - gamearr.indx) <= len+1)
+        gamearr.capacity = gamearr.capacity == 0 ? 2 : gamearr.capacity*2;
 
+    char *new = NULL;
+    new = realloc(gamearr.str, sizeof(char)*gamearr.capacity);
+    if (new == NULL) {
+        exit(1);
+    }
 
-//----start main
+    gamearr.str = new;
+
+    memcpy(&gamearr.str[gamearr.indx], str, len);
+    gamearr.indx += len;
+
+}
+
 int main() {
-	darr darr = INIT_DARR;
-	char str[] = "hello guys ";
-	int szstr = strlen(str);
-	printf("%x\n", darr.dastr);
-	
-	apDarr(&darr, str, szstr); 
-	printf("%s\n", darr.dastr);
+    char *str = "hello world i am petru";
+    apndArr(str, 22);
+    char *str2 = "hello world i am michele";
+    apndArr(str2, 24);
+    apndArr("\x1b[7m", 4);
+    char *str3 = "hello world i am lol";
+    apndArr(str3, 20);
+    printf("%s\n", gamearr.str);
 
-	char str2[] = "hello form another one";
-	int szstr2 = strlen(str2);
-	apDarr(&darr, str2, szstr2); 
-	printf("%s\n", darr.dastr);
-	
-
-	return 0;
-}
-
-//----fn initializzation
-void apDarr(darr *darr, const char *apstr, int aplen) {
-	// reallocation and testo of input array
-	char *nwstr = NULL;
-	nwstr = realloc(darr->dastr, sizeof(char)*(darr->dalen + aplen));
-	if(nwstr == NULL) {
-		die("error with realloc");
-	}
-
-	memcpy(&nwstr[darr->dalen], apstr, aplen);
-	darr->dastr = nwstr;
-	darr->dalen += aplen;
-
-}
-
-void die(const char *dstr) {
-	perror(dstr);
-	exit(1);
 }
