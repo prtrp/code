@@ -1,4 +1,4 @@
-#define _POSIX_SOURCE 199309L
+#define _POSIX_C_SOUECE
 
 #include <stdio.h>
 #include <unistd.h>
@@ -10,28 +10,39 @@
 #include <string.h>
 #include <time.h>
 
-#define HEIGHT 30;
-#define WIDTH 40;
+#define HEIGHT 30
+#define WIDTH 40
 
 
 //----------------------------------------------------//
 //##################### data type ####################//
 //----------------------------------------------------//
 
+struct bounds {
+    int top_bound;
+    int bottom_bound;
+    int left_bound;
+    int right_bound;
+};
+
 // game settings
 struct game {
     bool gameOver;
 
-    int xHead, yHead;
-    char snake[128];
+    int snakeLen;
+    int snakeX[128];
+    int snakeY[128];
 
     int lastMove;
 
     int cols, rows;
     int xfruit, yfruit;
     int score;
+
+    struct bounds B;
 };
 struct game G;
+
 
 // termianl settings
 struct termianl {
@@ -133,13 +144,13 @@ int keyRead(void) {
 
     if(nread == 1) {
         switch (c) {
-            case 'q': return QUIT; G.gameOver = true; break;
+            case 'q': return QUIT;  
 
-            case 'w': return UP; if (G.xHead >= ((T.rows - G.rows)/2)+1) G.xHead--; break;
-            case 's': return DOWN; if (G.xHead < ((T.rows - G.rows)/2 + G.rows)-1) G.xHead++; break;
+            case 'w': return UP; 
+            case 's': return DOWN; 
 
-            case 'a': return LEFT; if (G.yHead >= ((T.cols - G.cols)/2)+1) G.yHead--; break;
-            case 'd': return RIGHT; if (G.yHead < (((T.cols - G.cols)/2)-1)+G.cols) G.yHead++; break;
+            case 'a': return LEFT;
+            case 'd': return RIGHT;
         }
     }
     else if (nread == -1 && errno != EAGAIN) {
@@ -171,7 +182,7 @@ int getCursorPosition(int *rows, int *cols) {
     return 0;
 }
 
-int getTermianlSize(int *rows, int *cols) {
+int getTerminalSize(int *rows, int *cols) {
     struct winsize ws;
     if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
 
@@ -187,20 +198,132 @@ int getTermianlSize(int *rows, int *cols) {
     }
 }
 
-void moveSnake(void) {
-    char buff[32];
+//----------------------------------------------------//
+//##################### LOGIC ########################//
+//----------------------------------------------------//
 
-    apndArr("\x1b[?25l", 6);
-    snprintf(buff, sizeof(buff), "\x1b[%d;%dH%c", G.xHead, G.yHead, G.snake[0]);
-    apndArr(buff,strlen(buff));
+bool isPositionOccupated(int x, int y) {
+    for (int i = 0; i < G.snakeLen; i++) {
+        if (G.snakeX[i] == x && G.snakeY[i] == y) return true;
+    }
+    return false;
+}
+
+void snakeMove(void) {
+    int key = keyRead();
+
+    if (key == UP || key == DOWN || key == LEFT || key == RIGHT || key == QUIT) {
+        G.lastMove = key;
+    }
+
+    switch (G.lastMove) {
+        case QUIT: G.gameOver = true; break;
+
+        case UP: G.snakeX[0]--; break;
+        case DOWN: G.snakeX[0]++;  break;
+
+        case LEFT: G.snakeY[0]--;  break;
+        case RIGHT: G.snakeY[0]++;  break;
+
+        default: 
+            break;
+    }
+
+    if (G.snakeX[0] < G.B.top_bound) G.snakeX[0] = G.B.bottom_bound;
+    if (G.snakeX[0] > G.B.bottom_bound) G.snakeX[0] = G.B.top_bound;
+    if (G.snakeY[0] < G.B.left_bound) G.snakeY[0] = G.B.right_bound;
+    if (G.snakeY[0] > G.B.right_bound) G.snakeY[0] = G.B.left_bound;
+}
+
+void lose(void) {
+    for (int i = 1; i < G.snakeLen; i++) {
+        if (G.snakeX[0] == G.snakeX[i] && G.snakeY[0] == G.snakeY[i]) {
+            G.gameOver = true;
+            return;
+        }
+    }
+}
+
+void logic(void) {
+
+    // save previous tail
+    int prevX = G.snakeX[G.snakeLen-1];
+    int prevY = G.snakeY[G.snakeLen-1];
+
+    // move body not head
+    for (int i = G.snakeLen-1; i > 0; i--) {
+        G.snakeX[i] = G.snakeX[i-1];
+        G.snakeY[i] = G.snakeY[i-1];
+    }
+
+    snakeMove();
+
+    G.B.top_bound = ((T.rows - G.rows)/2)+1;
+    G.B.bottom_bound = G.B.top_bound + G.rows -3;
+    G.B.left_bound = ((T.cols - G.cols)/2)+1;
+    G.B.right_bound = G.B.left_bound + G.cols-3;
+
+
+    if (G.snakeX[0] == G.xfruit && G.snakeY[0] == G.yfruit) {
+
+        // regenerate the new fruits
+        do{
+            G.xfruit = G.B.top_bound + (rand() % (G.rows -2));
+            G.yfruit = G.B.left_bound + (rand() % (G.cols -2));
+        }
+        while (isPositionOccupated(G.xfruit, G.yfruit));
+
+
+        // create another fruit in the temrminal
+        G.score += 10;
+        G.snakeLen++;
+
+        // set the tail coordinates
+        G.snakeX[G.snakeLen-1] = prevX;
+        G.snakeX[G.snakeLen-1] = prevY;
+
+    }
+    lose();
+
 }
 
 //----------------------------------------------------//
 //##################### DRAW PART ####################//
 //----------------------------------------------------//
 
-void prtRec(int width, int height) {
+void delay(int ms) {
+    struct timespec ts = {
+        .tv_sec = ms / 1000,
+        .tv_nsec = (ms % 1000) * 1000000
+    };
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+}
+
+
+void prntfruit(void) {    
+
     char buff[32];
+    snprintf(buff, sizeof(buff), "\x1b[%d;%dH%c", G.xfruit, G.yfruit,'*');
+    apndArr(buff, strlen(buff));
+}
+
+void drawSnake(void) {
+
+    char buff[256];
+    apndArr("\x1b[?25l", 6);
+
+    snprintf(buff, sizeof(buff), "\x1b[%d;%dH%c", G.snakeX[0], G.snakeY[0], 'O');
+    apndArr(buff, strlen(buff));
+
+    for (int i = 1; i < G.snakeLen; i++) {
+        snprintf(buff, sizeof(buff), "\x1b[%d;%dH%c", G.snakeX[i], G.snakeY[i], 'o');
+        apndArr(buff,strlen(buff));
+    }
+}
+
+
+void prtRec(int width, int height) {
+    char buff[64];
     for (int i = 0; i < height; i++) {
         snprintf(buff, sizeof(buff), 
 
@@ -238,84 +361,23 @@ void prtRec(int width, int height) {
         }
     }
     apndArr("\r\n", 2);
-}
-
-void delay(int ms) {
-    struct timespec ts = {
-        .tv_sec = ms / 1000,
-        .tv_nsec = (ms % 1000) * 1000000
-    };
-    while (nanosleep(&ts, &ts) == -1 && errno == EINTR);
+    snprintf(buff, sizeof(buff), "\x1b[%d;%dHscore: %d", ((T.rows - G.rows)/2) + HEIGHT, (T.cols - G.cols)/2, G.score); 
+    apndArr(buff, strlen(buff));
 }
 
 void draw(void) {
     write(STDOUT_FILENO, "\x1b[2J\x1b[H", 7);
 
-    getTermianlSize(&G.rows, &G.cols);
-    if (G.cols > T.cols) G.cols = T.cols;
+    getTerminalSize(&G.rows, &G.cols);
 
+    if (G.cols > T.cols) G.cols = T.cols;
     if (G.rows > T.rows) G.rows = T.rows-2;
 
     prtRec(G.cols, G.rows);
-    moveSnake();
+    drawSnake();
+    prntfruit();
     write(STDOUT_FILENO, gamearr.str, gamearr.indx);
     freeGbff();
-}
-
-//----------------------------------------------------//
-//##################### LOGIC ########################//
-//----------------------------------------------------//
-
-void snakeMove(void) {
-    int key = keyRead();
-
-    if (key == UP || key == DOWN || key == LEFT || key == RIGHT || key == QUIT) {
-        G.lastMove = key;
-    }
-
-    const int top_bound = (T.rows - G.rows)/2 + 1;
-    const int bottom_bound = top_bound + G.rows - 3;
-    const int left_bound = (T.cols - G.cols)/2 + 1;
-    const int right_bound = left_bound + G.cols - 3;
-
-    switch (G.lastMove) {
-        case QUIT: 
-            G.gameOver = true; 
-            break;
-
-        case UP:
-            G.xHead--;
-            if (G.xHead < top_bound) G.xHead = bottom_bound;
-            break;
-
-        case DOWN:
-            G.xHead++;
-            if (G.xHead > bottom_bound) G.xHead = top_bound;
-            break;
-
-        case LEFT:
-            G.yHead--;
-            if (G.yHead < left_bound) G.yHead = right_bound;
-            break;
-
-        case RIGHT:
-            G.yHead++;
-            if (G.yHead > right_bound) G.yHead = left_bound;
-            break;
-
-        default: 
-            break;
-
-    }
-}
-
-void lose(void) {
-}
-
-void logic(void) {
-    snakeMove();
-    lose();
-
 }
 
 //----------------------------------------------------//
@@ -324,29 +386,34 @@ void logic(void) {
 
 void setup() {
     enableRowMode();
-    getTermianlSize(&G.rows, &G.cols);
+    getTerminalSize(&G.rows, &G.cols);
 
     G.gameOver = false;
     G.cols = WIDTH;
     G.rows = HEIGHT;
 
     G.score = 0;
-    G.xfruit = 0;
-    G.yfruit = 0;
-    G.xHead = T.rows/2; 
-    G.yHead = T.cols/2;
 
-    G.snake[0] = 'O';
-    G.snake[1] = '\0';
+    G.B.top_bound = ((T.rows - G.rows)/2)+1;
+    G.B.bottom_bound = G.B.top_bound + G.rows -3;
+    G.B.left_bound = ((T.cols - G.cols)/2)+1;
+    G.B.right_bound = G.B.left_bound + G.cols-3;
 
+    G.xfruit = G.B.top_bound + (rand() % (G.rows -2));
+    G.yfruit = G.B.left_bound + (rand() % (G.cols -2));
+
+
+    G.snakeLen = 1;
+    G.snakeX[0] = T.rows/2; 
+    G.snakeY[0] = T.cols/2;
 }
 
 int main() {
+    srand(time(NULL));
     setup();
-
     while(!G.gameOver) {
-        draw();
         logic();
-        delay(100);
+        draw();
+        delay(25);
     }
 }
