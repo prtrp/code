@@ -1,8 +1,8 @@
 Projects that is want to implement:
-- [] Text Editor 
+- [O] Text Editor 
 - [x] snake game 
-- [] upgrade Bank project
-- [] make my Bank project LAN-working by adding networking
-- [] do pask (Personal Task Manager)
-- [] do an interpreter
-- [] make my terminal (maybe like suckless st)
+- [O] upgrade Bank project
+- [O] make my Bank project LAN-working by adding networking
+- [O] do pask (Personal Task Manager)
+- [O] do an interpreter
+- [O] make my terminal (maybe like suckless st)
