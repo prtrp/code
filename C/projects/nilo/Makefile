@@ -7,4 +7,4 @@ all:
 	@$(CC) $(FLAGS) $(SRC) -o $(OUT)
 
 exec:
-	./bin/main
+	@./bin/main

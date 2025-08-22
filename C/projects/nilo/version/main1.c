@@ -2,34 +2,23 @@
 //-----------------------INCLUDES-----------------------------
 //############################################################
 
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
 
 
-//############################################################
-//--------------------------defines---------------------------
-//############################################################
-
-#define CTRL_KEY(k) ((k) & 0x1f)
 
 //############################################################
 //--------------------------DATA------------------------------
 //############################################################
 
+
 /* creating the original settings terminal */
-
-struct editorConfig {
-    int screenrows;
-    int screencols;
-    struct termios orig_termios;
-};
-
-struct editorConfig E;
+struct termios orig_termios;
 
 
 
@@ -37,29 +26,28 @@ struct editorConfig E;
 //-----------------------TERMINAL-----------------------------
 //############################################################
 
+
 void die(const char *s) {
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-    write(STDOUT_FILENO, "\x1b[H", 3);
     perror(s);
     exit(1);
 }
 
 void disableRawMode() {
-    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &E.orig_termios) == -1) die("tcsetattr");     
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios) == -1) die("tcsetattr");     
 }
 
 void enableRawMode() {
 
     /* read attributes of terminal
      * take inital attributes*/
-    if (tcgetattr(STDIN_FILENO, &E.orig_termios) == -1) die("tcgetattr");
+    if (tcgetattr(STDIN_FILENO, &orig_termios) == -1) die("tcgetattr");
 
     /* before exit call this function 
      * comes from stdlib.h */
     atexit(disableRawMode);
 
     /* create the raw mode terminal attribtes*/
-    struct termios raw = E.orig_termios;
+    struct termios raw = orig_termios;
 
      /* change the attributes inside the place holder 
      * c_lflag means local flags
@@ -108,104 +96,29 @@ void enableRawMode() {
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
-/* his job is to wait for one keypress and return it */
-char editorReadKey() {
-    int nread;
-    char c;
-
-    /* read() and STDIN_FILENO comes from unistd.h
-    *  read() will read 1 byte from standard input inside c
-    *  and will do it unitll have no bytes to read 
-    *  it by defoult uses coocked mode, but we need raw mode */
-    while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
-        if (nread == -1 && errno != EAGAIN) die("read");
-    }
-    return c;
-}
-
-int getCursorPosition(int *rows, int *cols) {
-    if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
-
-
-}
-
-int getWindowSize(int *rows, int *cols) {
-    struct winsize ws;
-
-    if (1 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
-        if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
-        editorReadKey();
-        return -1;
-    }
-    else { 
-        *cols = ws.ws_col; 
-        *rows = ws.ws_row; 
-        return 0;
-    }
-} 
-
-
-
-//############################################################
-//------------------------OUTPUT------------------------------
-//############################################################
-
-void editorDrawRows() {
-    int y;
-    for (y = 0; y <= E.screenrows; y++) {
-        write(STDOUT_FILENO, "~\r\n", 3);
-    }
-}
-
-void editorRefreshScreen() {
-
-    /* it is an escape sequence, the 2J clear the entire screen */
-    write(STDOUT_FILENO, "\x1b[2J", 4);
-
-    /* reposition the cursor on the top left corner */
-    write(STDOUT_FILENO, "\x1b[H", 3);
-
-    editorDrawRows();
-
-    write(STDOUT_FILENO, "\x1b[H", 3);
-
-}
-
-//############################################################
-//-------------------------INPUT------------------------------
-//############################################################
-
-/* waits for a keypress and handles it */
-void editorProcessKeypress() {
-    char c = editorReadKey();    
-
-    switch (c) {
-        case CTRL_KEY('q'):
-            write(STDOUT_FILENO, "\x1b[2J", 4);
-            write(STDOUT_FILENO, "\x1b[H", 3);
-            exit(0);
-            break;
-    }
-}
-
 
 
 //############################################################
 //--------------------------INIT------------------------------
 //############################################################
 
-void initEditor() {
-    if (getWindowSize(&E.screenrows, &E.screencols) == -1) die("getWindowSize");
-}
 
 int main() {
     enableRawMode();
-    initEditor();
 
+    /* read() and STDIN_FILENO comes from unistd.h
+    *  read() will read 1 byte from standard input inside c
+    *  and will do it unitll have no bytes to read 
+    *  it by defoult uses coocked mode, but we need raw mode */
     
     while (1) {
-        editorRefreshScreen();
-        editorProcessKeypress();
+        char c = '\0';
+        if (read(STDIN_FILENO, &c, 1) == -1 && errno != EAGAIN) die("read");
+
+        if (iscntrl(c)) printf("%d\r\n", c);
+        else printf("%d ('%c')\r\n", c, c);
+
+        if (c == 'q') break;
     }
 
     return 0;
