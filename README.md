@@ -1,5 +1,5 @@
 Projects that is want to implement:
-- [O] Text Editor 
+- [O] Text Editor (nilo) 
 - [x] snake game 
 - [O] upgrade Bank project
 - [O] make my Bank project LAN-working by adding networking
