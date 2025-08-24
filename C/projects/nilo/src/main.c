@@ -2,6 +2,7 @@
 //-----------------------INCLUDES-----------------------------
 //############################################################
 
+
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -9,6 +10,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <termios.h>
+#include <string.h>
 
 
 //############################################################
@@ -22,7 +24,6 @@
 //############################################################
 
 /* creating the original settings terminal */
-
 struct editorConfig {
     int screenrows;
     int screencols;
@@ -61,50 +62,14 @@ void enableRawMode() {
     /* create the raw mode terminal attribtes*/
     struct termios raw = E.orig_termios;
 
-     /* change the attributes inside the place holder 
-     * c_lflag means local flags
-     *
-     * ~(ECHO)      Disable echoing of typed characters
-     *
-     * ~(ICANON)    read byte by byte and not buffering
-     *
-     * ~(ISIG)      Disable SIGINT (Ctrl+C) and SIGTSTP (Ctrl+Z) signals
-     *
-     * ~(IEXTEN)    disable extended input processing (Ctrl+V) */
     raw.c_lflag &= ~(ECHO | ICANON | ISIG | IEXTEN);
-
-    /* c_iflag means input flag 
-     *
-     * ~(IXON)      disable stop or resume stram data ctrl-S or ctrl-Q
-     *
-     * ~(ICRNL)     disabled do not translate CR to NL
-     *
-     * ~(BRKINT)    if turned on, a SIGINT can kill the program like Ctrl-C
-     *
-     * ~(ISTRIP)    disable stripping of 8th bit
-     *
-     * ~(INPCK)     disabile parity checking */
     raw.c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-
-    /* c_cflag means control flag 
-     * (CS8) is a bit mask, sets character size to 8 bits per bytes */
     raw.c_cflag |= (CS8);
-
-    /* c_oflag means output flag
-     * ~(OPOST) do not process the output (not convert \n to \r\n */
     raw.c_oflag &= ~(OPOST);
 
-    /* c_cc stands for control character 
-     * VMIN     sets the minimum bytes of input needed before read() can return
-     * VTIME    sets the maximum amout of time to wait before read() can return */
     raw.c_cc[VMIN] = 0;
     raw.c_cc[VTIME] = 1;
 
-    /* set attributes for terminal of out place holder into
-     * the actual terminal 
-     * TCSAFLUSH specifies when to apply the changes, in this 
-     * case waits for all pending output to be written to the terminal,
-     * discard any input that hasn't been read */
     if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw) == -1) die("tcsetattr");
 }
 
@@ -113,10 +78,6 @@ char editorReadKey() {
     int nread;
     char c;
 
-    /* read() and STDIN_FILENO comes from unistd.h
-    *  read() will read 1 byte from standard input inside c
-    *  and will do it unitll have no bytes to read 
-    *  it by defoult uses coocked mode, but we need raw mode */
     while ((nread = read(STDIN_FILENO, &c, 1)) != 1) {
         if (nread == -1 && errno != EAGAIN) die("read");
     }
@@ -124,27 +85,67 @@ char editorReadKey() {
 }
 
 int getCursorPosition(int *rows, int *cols) {
+    char buf[32];
+    unsigned int i = 0;
+
+    // for get cursor position
     if (write(STDOUT_FILENO, "\x1b[6n", 4) != 4) return -1;
 
+    while (1 < sizeof(buf) -1) {
+        if (read(STDIN_FILENO, &buf[i], 1) != 1) break;
+        if (buf[i] == 'R') break;
+        i++;
+    }
+    buf[i] = '\0';
 
+    if (buf[0] != '\x1b' || buf[1] != '[') return -1;
+    if (sscanf(&buf[2], "%d;%d", rows, cols) != 2) return -1;
+    return 0;
 }
 
 int getWindowSize(int *rows, int *cols) {
     struct winsize ws;
 
-    if (1 || ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1 || ws.ws_col == 0) {
         if (write(STDOUT_FILENO, "\x1b[999C\x1b[999B", 12) != 12) return -1;
-        editorReadKey();
-        return -1;
+        return getCursorPosition(rows, cols);
     }
     else { 
         *cols = ws.ws_col; 
         *rows = ws.ws_row; 
         return 0;
     }
-} 
+}
 
 
+
+//############################################################
+//--------------------APPEND BUFFER---------------------------
+//############################################################
+
+struct abuf {
+    char *b;
+    int len;
+};
+
+#define ABUF_INIT {NULL, 0}
+
+void abAppend (struct abuf *ab, const char *s, int len) {
+    // create ora reallocate memory plus the size of memory
+    char *new = realloc(ab->b, ab->len + len);
+
+    if (new == NULL) return;
+    // inserting starting by the end of the last string
+    
+
+    memcpy(&new[ab->len], s, len);
+    ab->b = new;
+    ab->len += len;
+}
+
+void abFree (struct abuf *ab) {
+    free(ab->b);
+}
 
 //############################################################
 //------------------------OUTPUT------------------------------
@@ -152,8 +153,9 @@ int getWindowSize(int *rows, int *cols) {
 
 void editorDrawRows() {
     int y;
-    for (y = 0; y <= E.screenrows; y++) {
-        write(STDOUT_FILENO, "~\r\n", 3);
+    for (y = 0; y < E.screenrows; y++) {
+        write(STDOUT_FILENO, "~", 1);
+        if (y < E.screenrows -1) write(STDOUT_FILENO, "\r\n", 2);
     }
 }
 
@@ -166,7 +168,6 @@ void editorRefreshScreen() {
     write(STDOUT_FILENO, "\x1b[H", 3);
 
     editorDrawRows();
-
     write(STDOUT_FILENO, "\x1b[H", 3);
 
 }
@@ -187,6 +188,7 @@ void editorProcessKeypress() {
             break;
     }
 }
+//
 
 
 

@@ -9,3 +9,4 @@ class person:
 person1 = person("petru", 10)
 
 print(person1.description())
+
